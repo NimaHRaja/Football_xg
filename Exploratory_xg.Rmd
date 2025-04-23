@@ -1,0 +1,138 @@
+---
+title: "Exploratory_xg"
+author: "Nima"
+date: "2025-04-23"
+output: 
+  html_document: 
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(understatr)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(knitr)
+```
+
+# About
+
+Exploring Understat's data.
+
+```{r}
+DF_xg <- 
+  rbind(
+    get_league_teams_stats(league_name = "EPL", year = 2023),
+    get_league_teams_stats(league_name = "EPL", year = 2022),
+    get_league_teams_stats(league_name = "EPL", year = 2021),
+    get_league_teams_stats(league_name = "EPL", year = 2020),
+    get_league_teams_stats(league_name = "EPL", year = 2019),
+    get_league_teams_stats(league_name = "EPL", year = 2018),
+    get_league_teams_stats(league_name = "EPL", year = 2017),
+    get_league_teams_stats(league_name = "EPL", year = 2016),
+    get_league_teams_stats(league_name = "EPL", year = 2015),
+    get_league_teams_stats(league_name = "EPL", year = 2014)
+  )
+
+DF_table_summary <- 
+  inner_join(
+    DF_xg %>% select(xpts,date,pts,xG,xGA,scored,team_name,year),
+    DF_xg %>% select(date,xG,xGA,scored,team_name,year) %>% rename(xG = xGA, xGA = xG),
+    by = c("date","xG", "xGA", "year")) %>%
+  group_by(team_name.x, year) %>%
+  summarise(xpts = sum(xpts), pts = sum(pts), GD = sum(scored.x - scored.y), GF = sum(scored.x), .groups = "drop") %>% 
+  # arrange(year,desc(pts),desc(GD)) %>% 
+  mutate(points = pts + GD/1000 + GF/1000000) 
+```
+
+```{r}
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  filter(table_rank <= 4) %>% 
+  dcast(year ~ table_rank, value.var = "justice_rank") %>% 
+  kable()
+```
+
+```{r}
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  ggplot(aes(x = as.factor(table_rank), y = justice_rank)) +
+  # geom_point()
+  geom_boxplot()
+
+
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  ggplot(aes(x = as.factor(table_rank), y = justice_rank)) +
+  geom_point()
+  # geom_boxplot()
+```
+
+```{r}
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  mutate(rank_diff = table_rank - justice_rank) %>% 
+  ggplot(aes(x = rank_diff)) +
+  geom_histogram(binwidth = 1, fill = "blue")
+```
+
+```{r}
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  mutate(rank_diff = table_rank - justice_rank) %>% 
+  filter(abs(rank_diff)> 5) %>% 
+  kable()
+```
+
+```{r}
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  mutate(rank_diff = table_rank - justice_rank) %>% 
+  group_by(team_name.x) %>% 
+  summarise(tot_years = n(), diff_0_years = sum(if_else(table_rank == justice_rank, 1, 0))) %>% 
+  kable()
+```
+
+```{r}
+DF_xg %>% 
+  group_by(team_name) %>% 
+  summarise(xpts = sum(xpts), pts = sum(pts), games = n()) %>% 
+  mutate(mean_xpts = xpts/games, mean_pts = pts/games) %>% 
+  ggplot(aes(x = mean_xpts, mean_pts, label = team_name)) +
+  geom_point(colour = "blue") +
+  geom_abline(colour = "blue") +
+  geom_text(size = 3, colour = "red")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

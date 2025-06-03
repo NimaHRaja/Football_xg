@@ -92,7 +92,24 @@ DF_table_summary %>%
 
 ``` r
   # geom_boxplot()
+
+DF_table_summary %>% 
+  group_by(year) %>% 
+  mutate(table_rank = rank(-points)) %>% 
+  mutate(justice_rank = rank(-xpts)) %>% 
+  ungroup() %>%
+  mutate(one = 1) %>%
+  dcast(justice_rank ~ table_rank, value.var = "one", fun.aggregate = sum) %>%
+  melt(id.vars = "justice_rank") %>%
+  rename(table_rank = variable) %>% 
+  ggplot(aes(x = table_rank, y = justice_rank, label = value, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red") +
+  geom_text() + 
+  scale_y_reverse()
 ```
+
+![](Exploratory_xg_files/figure-html/unnamed-chunk-3-3.png)<!-- -->
 
 
 ``` r

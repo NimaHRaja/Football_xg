@@ -220,3 +220,14 @@ DF_xg %>%
 ```
 
 ![](Exploratory_xg_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
+
+
+
+
+
+
+
+
+
+

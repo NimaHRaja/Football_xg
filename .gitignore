@@ -2,4 +2,5 @@
 *.Rproj
 .Rhistory
 *.html
-/Exploratory_xg_cache
+/data
+/Exploratory/Exploratory_xg_cache

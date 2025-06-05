@@ -1,37 +1,83 @@
-# devtools::install_github("JaseZiv/worldfootballR")
 library(worldfootballR)
-epl_results <- understat_league_match_results(league = "EPL", season_start_year = 2023)
+library(dplyr)
+library(ggplot2)
+
+source("generate_match_samples.R")
+source("write_a_batch_points_summary.R")
 
 
+write_a_batch_points_summary(year = 2020, num_scenarios = 10000, batch_id = 3)
 
 
-a_match <- function(i){
-  Team1 <- epl_results$home_abbr[i]
-  Team2 <- epl_results$away_abbr[i]
-  probs <- c(epl_results$forecast_win[i],epl_results$forecast_draw[i],epl_results$forecast_loss[i])
-  
-  ss <- data.frame(
-    Team1,
-    Team2,
-    scenario_id = 1:1000,
-    outcome = sample (c(Team1,"DRW",Team2), size=1000, replace=T, prob= probs))
-  
-  rbind(
-    ss %>% mutate(points = if_else(Team1 == outcome, 3, if_else(outcome == "DRW",1,0))) %>% select(Team = Team1, scenario_id, points),
-    ss %>% mutate(points = if_else(Team2 == outcome, 3, if_else(outcome == "DRW",1,0))) %>% select(Team = Team2, scenario_id, points)
-  ) }
+DF <- 
+  do.call("rbind", lapply(
+    list.files("data/", full.names = TRUE),
+    read.csv))
 
-
-outcome <- do.call("rbind", lapply(1:380, a_match))
-
-
-
-
-outcome %>% 
-  group_by(scenario_id, Team) %>% 
-  summarise(points = sum(points), .groups = "drop") %>% 
-  group_by(scenario_id) %>% 
+DF %>% 
+  group_by(scenario_id, batch_id) %>% 
   mutate(rrr = rank(desc(points),ties.method = "random")) %>% 
   filter(rrr == 1) %>% 
   group_by(Team) %>% 
-  summarise(n()) %>% View()
+  summarise(freq = n()) %>% 
+  View()
+
+
+
+DF %>% 
+  group_by(scenario_id, batch_id, Team) %>% 
+  summarise(points = sum(points), .groups = "drop") %>% 
+  group_by(scenario_id, batch_id) %>% 
+  mutate(rrr = rank(desc(points),ties.method = "random")) %>% 
+  filter(rrr <= 5) %>% 
+  group_by(Team) %>% 
+  summarise(freq = n()) %>% 
+  View()
+
+
+
+
+DF %>% 
+  group_by(scenario_id, batch_id, Team) %>% 
+  summarise(points = sum(points), .groups = "drop") %>% 
+  group_by(scenario_id, batch_id) %>% 
+  mutate(rrr = rank(desc(points),ties.method = "random")) %>% 
+  filter(rrr >= 18) %>% 
+  group_by(Team) %>% 
+  summarise(freq = n()) %>% 
+  View()
+
+
+
+DDF <- 
+  DF %>% 
+  group_by(scenario_id, batch_id, Team) %>% 
+  summarise(points = sum(points), .groups = "drop") %>% 
+  group_by(scenario_id, batch_id) %>% 
+  mutate(rrr = rank(desc(points),ties.method = "random")) %>% 
+  ungroup() %>% 
+  group_by(Team, rrr) %>% 
+  summarise(freq = n(), .groups = "drop")
+
+
+DDF_meanrank <- 
+  DDF %>% 
+  group_by(Team) %>% 
+  summarise(mean_pos = sum(freq * rrr)/sum(freq)) 
+
+
+DDF$Team <- factor(DDF$Team, levels=(DDF_meanrank$Team)[order(DDF_meanrank$mean_pos)])
+
+DDF %>% 
+  ggplot(aes(x = Team, y = rrr, fill = freq)) + 
+  geom_tile()
+
+
+
+DDF %>% filter(round(freq/sum(freq)*2000,0) > 0) %>% 
+  ggplot(aes(x = Team, y = rrr, fill = freq, label = round(freq/sum(freq)*2000,0))) +
+  # xlim(levels(unique(DDF$Team)[order(DDF$mean_pos)])) +
+  # scale_x_discrete(limits=(DDF$Team)[order(DDF$mean_pos)]) +
+  # geom_tile()+
+  geom_text() +
+  scale_y_continuous(trans = "reverse") 

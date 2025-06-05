@@ -18,7 +18,7 @@ library(knitr)
 
 # About
 
-Exploring Understat's data.
+Exploring Understat's data using *understatr*.
 
 ```{r, cache=TRUE}
 DF_xg <- 
@@ -131,15 +131,6 @@ DF_xg %>%
   geom_abline(colour = "blue") +
   geom_text(size = 3, colour = "red")
 ```
-
-
-
-
-
-
-
-
-
 
 
 

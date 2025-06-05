@@ -11,7 +11,7 @@ output:
 
 # About
 
-Exploring Understat's data.
+Exploring Understat's data using *understatr*.
 
 
 ``` r
@@ -220,23 +220,3 @@ DF_xg %>%
 ```
 
 ![](Exploratory_xg_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

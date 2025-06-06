@@ -10,6 +10,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(understatr)
+library(ggfootball)
+library(worldfootballR)
 library(dplyr)
 library(ggplot2)
 library(reshape2)
@@ -18,7 +20,10 @@ library(knitr)
 
 # About
 
-Exploring Understat's data using *understatr*.
+Exploring Understat's data using *understatr*, *ggfootball*, and and *worldfootballR*.
+
+
+get *understatr* data.  
 
 ```{r, cache=TRUE}
 DF_xg <- 
@@ -46,6 +51,8 @@ DF_table_summary <-
   mutate(points = pts + GD/1000 + GF/1000000) 
 ```
 
+xg_rank vs. table_rank  
+
 ```{r}
 DF_table_summary %>% 
   group_by(year) %>% 
@@ -54,9 +61,7 @@ DF_table_summary %>%
   filter(table_rank <= 4) %>% 
   dcast(year ~ table_rank, value.var = "justice_rank") %>% 
   kable()
-```
 
-```{r}
 DF_table_summary %>% 
   group_by(year) %>% 
   mutate(table_rank = rank(-points)) %>% 
@@ -64,7 +69,6 @@ DF_table_summary %>%
   ggplot(aes(x = as.factor(table_rank), y = justice_rank)) +
   # geom_point()
   geom_boxplot()
-
 
 DF_table_summary %>% 
   group_by(year) %>% 
@@ -88,9 +92,7 @@ DF_table_summary %>%
   scale_fill_gradient(low = "white", high = "red") +
   geom_text() + 
   scale_y_reverse()
-```
 
-```{r}
 DF_table_summary %>% 
   group_by(year) %>% 
   mutate(table_rank = rank(-points)) %>% 
@@ -98,9 +100,7 @@ DF_table_summary %>%
   mutate(rank_diff = table_rank - justice_rank) %>% 
   ggplot(aes(x = rank_diff)) +
   geom_histogram(binwidth = 1, fill = "blue")
-```
 
-```{r}
 DF_table_summary %>% 
   group_by(year) %>% 
   mutate(table_rank = rank(-points)) %>% 
@@ -109,6 +109,8 @@ DF_table_summary %>%
   filter(abs(rank_diff)> 5) %>% 
   kable()
 ```
+
+pts vs xpts
 
 ```{r}
 DF_table_summary %>% 
@@ -119,9 +121,7 @@ DF_table_summary %>%
   group_by(team_name.x) %>% 
   summarise(tot_years = n(), diff_0_years = sum(if_else(table_rank == justice_rank, 1, 0))) %>% 
   kable()
-```
 
-```{r}
 DF_xg %>% 
   group_by(team_name) %>% 
   summarise(xpts = sum(xpts), pts = sum(pts), games = n()) %>% 
@@ -132,12 +132,134 @@ DF_xg %>%
   geom_text(size = 3, colour = "red")
 ```
 
+*ggfootball* example  
 
+```{r,cache=TRUE}
+# xG chart
+xg_chart(match_id = 26631, 
+         home_team_color = "red", 
+         away_team_color = "grey", 
+         competition = "Premier League",
+         bg_color = "#FFF1E5",
+         plot_bg_color = "#FFF1E5")
 
+# Shot/xG map
+xg_map(match_id = 26631, title = "xG Map")
+```
 
+get *worldfootballR* data  
 
+```{r,cache=TRUE}
+DF_xg <- 
+  rbind(
+    understat_league_match_results(league = "EPL", season_start_year = 2014),
+    understat_league_match_results(league = "EPL", season_start_year = 2015),
+    understat_league_match_results(league = "EPL", season_start_year = 2016),
+    understat_league_match_results(league = "EPL", season_start_year = 2017),
+    understat_league_match_results(league = "EPL", season_start_year = 2018),
+    understat_league_match_results(league = "EPL", season_start_year = 2019),
+    understat_league_match_results(league = "EPL", season_start_year = 2020),
+    understat_league_match_results(league = "EPL", season_start_year = 2021),
+    understat_league_match_results(league = "EPL", season_start_year = 2022),
+    understat_league_match_results(league = "EPL", season_start_year = 2023),
+    understat_league_match_results(league = "EPL", season_start_year = 2024)
+  )
+```
 
+games with Team A have higher xg than Team B but a lower probability on winning.  
 
+```{r}
+DF_xg %>% filter((home_xG > away_xG & forecast_win < forecast_loss) | 
+                (home_xG < away_xG & forecast_win > forecast_loss)) %>% 
+  arrange(desc(abs(home_xG - away_xG) * abs(forecast_win - forecast_loss))) %>% 
+  kable()
+```
+
+games whose outcome was very different compared to what xg suggested.
+
+```{r}
+DF_xg %>% 
+  filter((home_xG > away_xG & home_goals <= away_goals) | 
+           (home_xG < away_xG & home_goals >= away_goals)) %>% 
+  filter(abs(home_xG - away_xG) >= 3) %>% 
+  arrange(home_xG - away_xG) %>% 
+  kable()
+
+DF_xg %>% 
+  filter((home_xG > away_xG & home_goals < away_goals) | 
+           (home_xG < away_xG & home_goals > away_goals)) %>% 
+  filter(abs(home_xG - away_xG) >= 2) %>% 
+  arrange(home_xG - away_xG) %>% 
+kable()
+
+DF_xg %>% 
+  filter((home_xG > away_xG & home_goals <= away_goals & forecast_win > 0.95) | 
+           (home_xG < away_xG & home_goals >= away_goals & forecast_loss > 0.95)) %>% 
+  kable()
+
+DF_xg %>% 
+  filter((home_xG > away_xG & home_goals < away_goals & forecast_win > 0.9) | 
+           (home_xG < away_xG & home_goals > away_goals & forecast_loss > 0.9)) %>% 
+kable()
+```
+
+players: g vs. xg.
+
+```{r,cache=TRUE, echo=FALSE}
+DF_players <- 
+rbind(
+  get_player_seasons_stats(player_id = 1228),
+  get_player_seasons_stats(player_id = 1250),
+  get_player_seasons_stats(player_id = 802),
+  get_player_seasons_stats(player_id = 822),
+  get_player_seasons_stats(player_id = 502),
+  get_player_seasons_stats(player_id = 735),
+  get_player_seasons_stats(player_id = 755),
+  get_player_seasons_stats(player_id = 447),
+  get_player_seasons_stats(player_id = 574),
+  get_player_seasons_stats(player_id = 1741),
+  get_player_seasons_stats(player_id = 645),
+  get_player_seasons_stats(player_id = 498),
+  get_player_seasons_stats(player_id = 522),
+  get_player_seasons_stats(player_id = 482),
+  get_player_seasons_stats(player_id = 594),
+  get_player_seasons_stats(player_id = 618),
+  get_player_seasons_stats(player_id = 453),
+  get_player_seasons_stats(player_id = 468),
+  get_player_seasons_stats(player_id = 619),
+  get_player_seasons_stats(player_id = 647),
+  get_player_seasons_stats(player_id = 998),
+  get_player_seasons_stats(player_id = 1679),
+  get_player_seasons_stats(player_id = 314),
+  get_player_seasons_stats(player_id = 838),
+  get_player_seasons_stats(player_id = 556),
+  get_player_seasons_stats(player_id = 318),
+  get_player_seasons_stats(player_id = 5543),
+  get_player_seasons_stats(player_id = 8865),
+  get_player_seasons_stats(player_id = 6055),
+  get_player_seasons_stats(player_id = 4456),
+  get_player_seasons_stats(player_id = 6552),
+  get_player_seasons_stats(player_id = 8260),
+  get_player_seasons_stats(player_id = 8497),
+  get_player_seasons_stats(player_id = 5232),
+  get_player_seasons_stats(player_id = 5735),
+  get_player_seasons_stats(player_id = 2371))
+```
+
+```{r}
+DF_players$year <- as.factor(DF_players$year)
+
+DF_players %>% 
+  mutate(year = as.factor(year)) %>% 
+ ggplot(aes(x = xG, y = goals, 
+            shape = year,
+            colour = team_name
+            )) +
+  geom_point()+
+  scale_shape_manual(values=1:nlevels(DF_players$year)) +
+  facet_wrap(. ~ player_name) +
+  geom_abline(slope = 1, intercept = 0, colour = "green")
+```
 
 
 
